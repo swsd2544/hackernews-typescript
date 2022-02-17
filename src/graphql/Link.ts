@@ -1,4 +1,3 @@
-import { NexusGenObjects } from './../../nexus-typegen';
 import { extendType, idArg, nonNull, objectType, stringArg } from 'nexus';
 
 export const Link = objectType({
@@ -10,26 +9,13 @@ export const Link = objectType({
 	},
 });
 
-let links: NexusGenObjects['Link'][] = [
-	{
-		id: 1,
-		url: 'www.howtographql.com',
-		description: 'Fullstack tutorial for GraphQL',
-	},
-	{
-		id: 2,
-		url: 'graphql.org',
-		description: 'GraphQL official website',
-	},
-];
-
 export const LinkQuery = extendType({
 	type: 'Query',
 	definition(t) {
 		t.nonNull.list.nonNull.field('feed', {
 			type: 'Link',
 			resolve(parent, args, context, info) {
-				return links;
+				return context.prisma.link.findMany();
 			},
 		});
 	},
@@ -47,14 +33,13 @@ export const LinkMutation = extendType({
 			resolve(parent, args, context, info) {
 				const { description, url } = args;
 
-				let idCount = links.length + 1;
-				const link = {
-					id: idCount,
-					description,
-					url,
-				};
-				links.push(link);
-				return link;
+				const createdLink = context.prisma.link.create({
+					data: {
+						description,
+						url,
+					},
+				});
+				return createdLink;
 			},
 		});
 		t.nonNull.field('updateLink', {
@@ -67,12 +52,16 @@ export const LinkMutation = extendType({
 			resolve(parent, args, context, info) {
 				const { id, url, description } = args;
 
-				const linkIndex = links.findIndex((link) => link.id === +id);
-				if (linkIndex === -1) throw new Error(`ID=${id} not found`);
-
-				if (url) links[linkIndex].url = url;
-				if (description) links[linkIndex].description = description;
-				return links[linkIndex];
+				const updatedLink = context.prisma.link.update({
+					where: {
+						id: +id,
+					},
+					data: {
+						url: url || undefined,
+						description: description || undefined,
+					},
+				});
+				return updatedLink;
 			},
 		});
 		t.nonNull.field('deleteLink', {
@@ -83,10 +72,12 @@ export const LinkMutation = extendType({
 			resolve(parent, args, context, info) {
 				const { id } = args;
 
-				const linkIndex = links.findIndex((link) => link.id === +id);
-				if (linkIndex === -1) throw new Error(`ID=${id} not found`);
-
-				return links.splice(linkIndex, 1)[0];
+				const deletedLink = context.prisma.link.delete({
+					where: {
+						id: +id,
+					},
+				});
+				return deletedLink;
 			},
 		});
 	},
